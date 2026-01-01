@@ -27,7 +27,7 @@
  
  
  
- subroutine set_layers_a
+ subroutine set_layers_a                        ! set lattice vectors for primitive cells for 1st and 2nd layers
  
   allocate(Atoms1(3*Ntheta))
   allocate(Atoms2(3*Ntheta))
@@ -37,16 +37,16 @@
   allocate(PosX(3,6*Ntheta))
   allocate(Pos(2,Ntheta))
 
-  alat = 3.16d0                                   ! MoS2
+  alat = 3.16d0                                   ! MoS2 parameters
   z0 = 1.585d0
   dx = 6.15d0
 
-  a11(1) =  alat                                  ! set 1st layer
+  a11(1) =  alat                                  ! set lattice parameters for 1st layer
   a11(2) =  0.d0
   a12(1) = -alat*0.5d0
   a12(2) =  alat*dsqrt(3.d0)*0.5d0
 
-  a21(1) = a11(1)*costh - a11(2)*sinth            ! set 2nd layer
+  a21(1) = a11(1)*costh - a11(2)*sinth            ! set lattice parameters for 2nd layer
   a21(2) = a11(1)*sinth + a11(2)*costh
   a22(1) = a12(1)*costh - a12(2)*sinth
   a22(2) = a12(1)*sinth + a12(2)*costh
@@ -59,14 +59,14 @@
  
  
  
- subroutine calc_Ntheta
+ subroutine calc_Ntheta                          ! calculate number of primitive cells in the supercell
   Ntheta = m**2 + m*n + n**2
   print 1,Ntheta
 1 format('Ntheta=',I7)  
  end subroutine calc_Ntheta
  
  
- subroutine calc_theta
+ subroutine calc_theta                               ! calculate twisted angle
   costh = dfloat(m**2+4*m*n+n**2)/dfloat(2*Ntheta)
   sinth = dsqrt(1.d0-costh**2)
   theta = dacos(costh)
@@ -78,7 +78,7 @@
  
  
  
- subroutine calc_supercellT
+ subroutine calc_supercellT                        ! calculate lattice vectors for the supercells of 1st and 2nd layers
   T1 =  m*a11 - n*a12
   T2 = n*a11 + (m+n)*a12
   print 1,T1,dsqrt(T1(1)**2+T1(2)**2)
@@ -114,8 +114,8 @@
   do i = -Na,Na
    do j = -Na,Na
     R = At + i*a1 + j*a2
-    call miller_indexes(R,T1a,T2a,u,v)
-    if(-0.5d0 < u .and. u <= 0.5d0+eps .and. -0.5d0 < v .and. v <+ 0.5d0+eps) then
+    call miller_indexes(R,T1a,T2a,u,v)                      ! calculate Miller indexes
+    if(-0.5d0 < u .and. u <= 0.5d0+eps .and. -0.5d0 < v .and. v <+ 0.5d0+eps) then     ! keep only atoms within (T1,T2) cell
      print *,'u,v=',u,v
      Ngen = Ngen + 1                         ! we found atom within (T1,T2) supercell
      if(Ngen<=Ntheta) then
@@ -132,14 +132,14 @@
 
 
 
-      subroutine miller_indexes(Qe,Aa,Ab,u,v)
-       real(8)   :: Qe(2)
-       real(8)   :: Aa(2),Ab(2)
-       real(8)   :: u,v
+      subroutine miller_indexes(Qe,Aa,Ab,u,v)                           ! calculate Miller indexes in 2D
+       real(8)   :: Qe(2)                                               ! position of atom
+       real(8)   :: Aa(2),Ab(2)                                         ! lattice vectors
+       real(8)   :: u,v                                                 ! Miller indexes u,v
        real(8)   :: M(2,2),Y(2)
        M(1,1:2) = Aa(1:2)
        M(2,1:2) = Ab(1:2)
-       call solve2x2(M,Qe,Y)                                                  ! solve 2x2 equation M*Y=Qe
+       call solve2x2(M,Qe,Y)                                            ! solve 2x2 equation M*Y=Qe
        u = Y(1)
        v = Y(2)
       end subroutine miller_indexes
@@ -184,7 +184,7 @@
 
 
 
-      subroutine write_xsf(Period,Atm,Coord,Nat)
+      subroutine write_xsf(Period,Atm,Coord,Nat)                  ! write the atom positions in .xsf file
        integer             :: Nat
        character(2)        :: Atm(Nat)
        real(8)             :: Coord(3,Nat)
@@ -227,24 +227,24 @@
     real(8)         :: a1(2),a2(2)
     real(8)         :: Posr(:,:)
     character(2)    :: Atomsr(:)
-    real(8)         :: d0
+    real(8)         :: d0                                                    ! position z of the layer
     real(8)         :: T1a(2),T2a(2)
          
-    At = 1.d0/3.d0*a1 + 2.d0/3.d0*a2                      ! Mo atoms
+    At = 1.d0/3.d0*a1 + 2.d0/3.d0*a2                      ! Mo atom fractional coordinates
     print *,'generate Mo'
     call gen_layer1(At,a1,a2,T1a,T2a)
     Posr(1:2,1:Ntheta) = Pos(1:2,1:Ntheta)
     Posr(3,1:Ntheta) = d0
     Atomsr(1:Ntheta) = 'Mo'
 
-    At = 2.d0/3.d0*a1 + 1.d0/3.d0*a2                      ! S atoms
+    At = 2.d0/3.d0*a1 + 1.d0/3.d0*a2                      ! S atom fractional coordinates
     print *,'generate S1'
     call gen_layer1(At,a1,a2,T1a,T2a)
     Posr(1:2,Ntheta+1:2*Ntheta)   = Pos(1:2,1:Ntheta)
     Posr(3,Ntheta+1:2*Ntheta)     = d0 + z0
     Atomsr(Ntheta+1:2*Ntheta)     = 'S '
 
-    At = 2.d0/3.d0*a1 + 1.d0/3.d0*a2                      ! S atoms
+    At = 2.d0/3.d0*a1 + 1.d0/3.d0*a2                      ! second S atom
     print *,'generate S2'
     call gen_layer1(At,a1,a2,T1a,T2a)
     Posr(1:2,2*Ntheta+1:3*Ntheta) = Pos(1:2,1:Ntheta)
@@ -253,7 +253,7 @@
   end subroutine fill_atoms_layer
   
   
-  subroutine combine2
+  subroutine combine2                                          ! combine two layers in one structure
    PosX(1:3,1:3*Ntheta)          = Pos1(1:3,1:3*Ntheta)
    PosX(1:3,3*Ntheta+1:6*Ntheta) = Pos2(1:3,1:3*Ntheta)
    AtomsX(1:3*Ntheta)            = Atoms1(1:3*Ntheta)
@@ -262,7 +262,7 @@
 
 
 
-  subroutine gen_bilayer(m2,n2)
+  subroutine gen_bilayer(m2,n2)                               ! generate twisted bilayer for (m,n) combination
     integer       :: m2,n2
     m = m2
     n = n2
@@ -270,8 +270,8 @@
     call calc_theta 
     call set_layers_a
     call calc_supercellT 
-    call fill_atoms_layer(a11,a12,Pos1,Atoms1,3.d0,T1,T2)                  ! fill 1st layer 
-    call fill_atoms_layer(a21,a22,Pos2,Atoms2,3.d0+dx,T1s,T2s)             ! fill 2nd layer 
+    call fill_atoms_layer(a11,a12,Pos1,Atoms1,3.d0,T1,T2)                  ! fill 1st layer at 3 A
+    call fill_atoms_layer(a21,a22,Pos2,Atoms2,3.d0+dx,T1s,T2s)             ! fill 2nd layer at 3+dx A
     call combine2
   end subroutine gen_bilayer
 
@@ -284,23 +284,13 @@
     use Geometry2
     implicit none
     real(8)           :: Period(3,3)
-
- !   m = 2
- !   n = 1
-    call gen_bilayer(2,1)
-!    call calc_Ntheta 
-!    call calc_theta 
-!    call set_layers_a
-!    call calc_supercellT 
-!    call fill_atoms_layer(a11,a12,Pos1,Atoms1,3.d0,T1,T2)                  ! fill 1st layer 
-!    call fill_atoms_layer(a21,a22,Pos2,Atoms2,3.d0+dx,T1s,T2s)             ! fill 2nd layer 
-!    call combine2
+    call gen_bilayer(2,1)                            ! generate twisted bylayer for MoS2 for (2,1) supercell
     Period(1:2,1) = T1(1:2)
     Period(3,1) = 0.d0
     Period(1:2,2) = T2(1:2)
     Period(3,2) = 0.d0
     Period(1:3,3) = (/0.d0,0.d0,20.d0/)
-    call write_xsf(Period,AtomsX,PosX,6*Ntheta) 
+    call write_xsf(Period,AtomsX,PosX,6*Ntheta)      ! save generated structure in .xsf file
     deallocate(Atoms1,Atoms2,AtomsX)
     deallocate(Pos,Pos1,Pos2,PosX)   
    end Program bilayer
